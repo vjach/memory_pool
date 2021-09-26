@@ -3,7 +3,7 @@ if (NOT CMAKE_CROSSCOMPILING)
     FetchContent_Declare(
         google_test
         GIT_REPOSITORY https://github.com/google/googletest.git
-        SOURCE_DIR ${PROJECT_SOURCE_DIR}/externals/gtest
+        SOURCE_DIR ${CMAKE_SOURCE_DIR}/externals/gtest
         )
 
     if(NOT google_test_POPULATED)
