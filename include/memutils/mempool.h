@@ -7,38 +7,43 @@ namespace memutils {
 
 template <size_t blocks, size_t block_size>
 class MemoryPool {
-   public:
-    MemoryPool() : free_block_{nullptr}, untouched_blocks_{blocks} {}
-
-    auto Allocate() {
-        auto free_callback = [this](void* address) {
+   private:
+    struct Deleter {
+        Deleter(MemoryPool& pool) : pool{pool} {}
+        void operator()(void* address) {
             if (address != nullptr) {
                 auto ptr = reinterpret_cast<uint8_t*>(address);
                 auto block_addr =
                     reinterpret_cast<BlockHeader*>(ptr - sizeof(BlockHeader));
-                block_addr->next = free_block_;
-                free_block_ = block_addr;
+                block_addr->next = pool.free_block_;
+                pool.free_block_ = block_addr;
             }
-        };
+        }
 
-        using return_type = std::unique_ptr<void, decltype(free_callback)>;
+        MemoryPool& pool;
+    };
 
+   public:
+    using UniqueMemoryPtr = std::unique_ptr<void, Deleter>;
+    MemoryPool() : free_block_{nullptr}, untouched_blocks_{blocks} {}
+
+    auto Allocate() {
         if (free_block_) {
             auto block = free_block_;
             free_block_ = free_block_->next;
-            return return_type{reinterpret_cast<void*>(block->data),
-                               free_callback};
+            return UniqueMemoryPtr{reinterpret_cast<void*>(block->data),
+                                   Deleter(*this)};
         }
 
         if (untouched_blocks_) {
             --untouched_blocks_;
             auto block = reinterpret_cast<BlockHeader*>(
                 arena_ + total_block_size * untouched_blocks_);
-            return return_type{reinterpret_cast<void*>(block->data),
-                               free_callback};
+            return UniqueMemoryPtr{reinterpret_cast<void*>(block->data),
+                                   Deleter(*this)};
         }
 
-        return return_type{nullptr, free_callback};
+        return UniqueMemoryPtr{nullptr, Deleter(*this)};
     }
 
     constexpr const uint16_t Size() const { return blocks; }
@@ -57,10 +62,6 @@ class MemoryPool {
     BlockHeader* free_block_;
     size_t untouched_blocks_;
 };
-
-template <uint16_t chunks, uint16_t chunk_size>
-using UniqueMemoryPtr =
-    decltype(((MemoryPool<chunks, chunk_size>*)nullptr)->Allocate());
 
 }  // namespace memutils
 

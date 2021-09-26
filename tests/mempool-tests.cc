@@ -4,9 +4,12 @@
 #include "memutils/mempool.h"
 
 using namespace memutils;
+
+using Pool = MemoryPool<16, 1024>;
+
 TEST(MempoolTest, CanCreateIntsance) { MemoryPool<16, 1024> pool; }
 TEST(MempoolTest, CanAllocate) {
-    MemoryPool<16, 1024> pool;
+    Pool pool;
     {
         auto chunk = pool.Allocate();
         EXPECT_TRUE(chunk != nullptr);
@@ -14,9 +17,9 @@ TEST(MempoolTest, CanAllocate) {
 }
 
 TEST(MempoolTest, AllocateAll) {
-    MemoryPool<16, 1024> pool;
+    Pool pool;
     auto exhaust_pool = [&pool]() {
-        std::queue<UniqueMemoryPtr<16, 1024>> queue;
+        std::queue<Pool::UniqueMemoryPtr> queue;
         for (auto i = 0; i < pool.Size(); ++i) {
             auto chunk = pool.Allocate();
             EXPECT_TRUE(chunk != nullptr);
@@ -31,8 +34,8 @@ TEST(MempoolTest, AllocateAll) {
 }
 
 TEST(MempoolTest, NoDataCorruption) {
-    MemoryPool<16, 1024> pool;
-    std::queue<UniqueMemoryPtr<16, 1024>> queue;
+    Pool pool;
+    std::queue<Pool::UniqueMemoryPtr> queue;
     for (auto i = 0; i < pool.Size(); ++i) {
         auto chunk = pool.Allocate();
         EXPECT_TRUE(chunk != nullptr);
