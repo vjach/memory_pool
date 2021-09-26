@@ -27,23 +27,21 @@ class MemoryPool {
   using UniqueMemoryPtr = std::unique_ptr<void, Deleter>;
   MemoryPool() : free_block_{nullptr}, untouched_blocks_{blocks} {}
 
-  auto Allocate() {
+  UniqueMemoryPtr Allocate() {
     if (free_block_) {
       auto block = free_block_;
       free_block_ = free_block_->next;
-      return UniqueMemoryPtr{reinterpret_cast<void*>(block->data),
-                             Deleter(*this)};
+      return {reinterpret_cast<void*>(block->data), Deleter(*this)};
     }
 
     if (untouched_blocks_) {
       --untouched_blocks_;
       auto block = reinterpret_cast<BlockHeader*>(
           arena_ + total_block_size * untouched_blocks_);
-      return UniqueMemoryPtr{reinterpret_cast<void*>(block->data),
-                             Deleter(*this)};
+      return {reinterpret_cast<void*>(block->data), Deleter(*this)};
     }
 
-    return UniqueMemoryPtr{nullptr, Deleter(*this)};
+    return {nullptr, Deleter(*this)};
   }
 
   constexpr const uint16_t Size() const { return blocks; }
