@@ -9,18 +9,19 @@ template <size_t blocks, size_t block_size>
 class MemoryPool {
  private:
   struct Deleter {
-    Deleter(MemoryPool& pool) : pool{pool} {}
+    Deleter() : pool{nullptr} {}
+    Deleter(MemoryPool* pool) : pool{pool} {}
     void operator()(void* address) {
-      if (address != nullptr) {
+      if (pool != nullptr and address != nullptr) {
         auto ptr = reinterpret_cast<uint8_t*>(address);
         auto block_addr =
             reinterpret_cast<BlockHeader*>(ptr - sizeof(BlockHeader));
-        block_addr->next = pool.free_block_;
-        pool.free_block_ = block_addr;
+        block_addr->next = pool->free_block_;
+        pool->free_block_ = block_addr;
       }
     }
 
-    MemoryPool& pool;
+    MemoryPool* pool;
   };
 
  public:
@@ -31,17 +32,17 @@ class MemoryPool {
     if (free_block_) {
       auto block = free_block_;
       free_block_ = free_block_->next;
-      return {reinterpret_cast<void*>(block->data), Deleter(*this)};
+      return {reinterpret_cast<void*>(block->data), Deleter(this)};
     }
 
     if (untouched_blocks_) {
       --untouched_blocks_;
       auto block = reinterpret_cast<BlockHeader*>(
           arena_ + total_block_size * untouched_blocks_);
-      return {reinterpret_cast<void*>(block->data), Deleter(*this)};
+      return {reinterpret_cast<void*>(block->data), Deleter(this)};
     }
 
-    return {nullptr, Deleter(*this)};
+    return {nullptr, Deleter(this)};
   }
 
   constexpr const uint16_t Size() const { return blocks; }
