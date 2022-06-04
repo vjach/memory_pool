@@ -3,6 +3,7 @@ if (NOT CMAKE_CROSSCOMPILING)
     FetchContent_Declare(
         google_test
         GIT_REPOSITORY https://github.com/google/googletest.git
+        GIT_TAG release-1.11.0
         SOURCE_DIR ${CMAKE_SOURCE_DIR}/externals/gtest
         )
 
